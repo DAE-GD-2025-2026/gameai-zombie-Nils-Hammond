@@ -1,6 +1,8 @@
 ﻿#include "BTTask_Wander.h"
 #include "AIController.h"
 #include "GameFramework/Pawn.h"
+#include "NavigationSystem.h"
+#include "Navigation/PathFollowingComponent.h"
 
 UBTTask_Wander::UBTTask_Wander()
 {
@@ -8,19 +10,33 @@ UBTTask_Wander::UBTTask_Wander()
 	bNotifyTick = true;
 }
 
+bool UBTTask_Wander::PickNewWanderPoint(AAIController& Controller, APawn& Pawn)
+{
+	const UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(Pawn.GetWorld());
+	if (!NavSys) return false;
+
+	FNavLocation Result;
+	if (NavSys->GetRandomReachablePointInRadius(Pawn.GetActorLocation(), WanderRadius, Result))
+	{
+		Controller.MoveToLocation(Result.Location);
+		ElapsedSinceLastPoint = 0.f;
+		return true;
+	}
+	return false;
+}
 
 EBTNodeResult::Type UBTTask_Wander::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Executing Task"));
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Executing Wander Task"));
+
 	AAIController* Controller = OwnerComp.GetAIOwner();
-	if (!Controller || !Controller->GetPawn())
+	APawn* Pawn = Controller ? Controller->GetPawn() : nullptr;
+	
+	if (!Controller || !Controller->GetPawn() || !PickNewWanderPoint(*Controller, *Pawn))
 	{
 		return EBTNodeResult::Failed;
 	}
-
-	if (!pWanderBehavior)
-		pWanderBehavior = MakeUnique<FWander>();
 	
 	return EBTNodeResult::InProgress;
 }
@@ -30,25 +46,17 @@ void UBTTask_Wander::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemo
 	AAIController* Controller = OwnerComp.GetAIOwner();
 	APawn* Pawn = Controller ? Controller->GetPawn() : nullptr;
 
-	if (!Pawn)
+	if (!Controller || !Pawn)
 	{
 		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
 		return;
 	}
-
-	if (!pWanderBehavior)
+	
+	ElapsedSinceLastPoint += DeltaSeconds;
+	
+	const EPathFollowingStatus::Type Status = Controller->GetMoveStatus();
+	if (Status == EPathFollowingStatus::Idle || ElapsedSinceLastPoint > MaxTimePerPoint)
 	{
-		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
-		return;
-	}
-
-	const SteeringOutput Steering = pWanderBehavior->CalculateSteering(DeltaSeconds, *Pawn);
-
-	if (!Steering.LinearVelocity.IsNearlyZero())
-	{
-		Pawn->AddMovementInput(FVector(Steering.LinearVelocity, 0.f), 1.f);
-		FRotator newRotation = Pawn->GetControlRotation();
-		newRotation.Yaw = Steering.AngularVelocity * DeltaSeconds;
-		Pawn->SetActorRotation(newRotation);
+		PickNewWanderPoint(*Controller, *Pawn);
 	}
 }

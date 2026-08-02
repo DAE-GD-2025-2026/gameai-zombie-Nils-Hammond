@@ -21,6 +21,20 @@ public:
 	
 	virtual void BeginPlay() override;
 
+	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	
 	UFUNCTION()
 	virtual void OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
+	
+private:
+	void ReevaluateNearestItem();
+	
+	UPROPERTY()
+	TObjectPtr<UAIPerceptionComponent> PerceptionComp;
+	
+	UPROPERTY()
+	TObjectPtr<UBlackboardComponent> BlackboardComp;
+	
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> PerceivedItems;
 };

@@ -38,7 +38,9 @@ public class NilsHammondZombieRuntime : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
-				"AIModule"
+				"AIModule",
+				"NavigationSystem",
+				"GameAI_Zombie"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
