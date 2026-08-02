@@ -64,12 +64,22 @@ void UStudentPerceptor::OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 	//GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green,
 	//	FString::Printf(TEXT("Saw: %s (Class: %s)"), *Actor->GetName(), *Actor->GetClass()->GetName()));
 	
-	if (Cast<ABaseItem>(Actor))
+	//if (Cast<ABaseItem>(Actor))
+	//{
+	//	if (Stimulus.WasSuccessfullySensed())
+	//		PerceivedItems.Add(Actor);
+	//	else
+	//		PerceivedItems.Remove(Actor);
+	//}
+	PerceivedItems.Empty();
+	TArray<AActor*> PerceivedActors;
+	PerceptionComp->GetKnownPerceivedActors(UAISense_Sight::StaticClass(), PerceivedActors);
+	for (AActor* PerceivedActor : PerceivedActors)
 	{
-		if (Stimulus.WasSuccessfullySensed())
-			PerceivedItems.Add(Actor);
-		else
-			PerceivedItems.Remove(Actor);
+		if (Cast<ABaseItem>(PerceivedActor))
+		{
+			PerceivedItems.Add(PerceivedActor);
+		}
 	}
 }
 
