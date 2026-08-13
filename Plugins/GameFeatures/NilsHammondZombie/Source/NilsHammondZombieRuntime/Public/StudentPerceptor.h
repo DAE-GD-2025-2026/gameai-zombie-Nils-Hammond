@@ -28,6 +28,10 @@ public:
 	
 private:
 	void ReevaluateNearestItem();
+	void ReevaluateNearestHouse();
+	bool IsHouseOnCooldown(AActor* House);
+	void MarkHouseVisited(AActor* House);
+	void CheckHouseOccupancy();
 	
 	UPROPERTY()
 	TObjectPtr<UAIPerceptionComponent> PerceptionComp;
@@ -36,5 +40,17 @@ private:
 	TObjectPtr<UBlackboardComponent> BlackboardComp;
 	
 	UPROPERTY()
-	TArray<TObjectPtr<AActor>> PerceivedItems;
+	TArray<TObjectPtr<AActor>> KnownItems;
+	
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> KnownHouses;
+	
+	UPROPERTY()
+	TMap<TObjectPtr<AActor>, float> RecentlyVisitedHouses;
+	
+	UPROPERTY()
+	float HouseRevisitCooldown = 60.f;
+	
+	UPROPERTY()
+	TObjectPtr<AActor> CurrentHouse;
 };
