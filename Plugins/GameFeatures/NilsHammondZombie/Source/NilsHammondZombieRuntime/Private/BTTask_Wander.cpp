@@ -2,6 +2,7 @@
 #include "AIController.h"
 #include "GameFramework/Pawn.h"
 #include "NavigationSystem.h"
+#include "BehaviorTree/BlackboardComponent.h"
 #include "Navigation/PathFollowingComponent.h"
 
 UBTTask_Wander::UBTTask_Wander()
@@ -10,13 +11,43 @@ UBTTask_Wander::UBTTask_Wander()
 	bNotifyTick = true;
 }
 
-bool UBTTask_Wander::PickNewWanderPoint(AAIController& Controller, APawn& Pawn)
+bool UBTTask_Wander::PickNewWanderPoint(AAIController& Controller, APawn& Pawn, UBlackboardComponent* BB)
 {
 	const UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(Pawn.GetWorld());
 	if (!NavSys) return false;
 
+	const FVector PawnPos = Pawn.GetActorLocation();
+	FVector SampleOrigin = PawnPos;
+	FVector AversionDir = FVector::ZeroVector;
+	
+	if (BB)
+	{
+		if (AActor* Zombie = Cast<AActor>(BB->GetValueAsObject(TEXT("NearestZombie"))))
+		{
+			FVector Away = PawnPos - Zombie->GetActorLocation();
+			if (!Away.IsNearlyZero())
+			{
+				AversionDir += Away.GetSafeNormal() * ThreatAversionWeight;
+			}
+		}
+		
+		if (AActor* PurgeZone = Cast<AActor>(BB->GetValueAsObject(TEXT("NearestPurgeZone"))))
+		{
+			FVector Away = PawnPos - PurgeZone->GetActorLocation();
+			if (!Away.IsNearlyZero())
+			{
+				AversionDir += Away.GetSafeNormal() * PurgeAversionWeight;
+			}
+		}
+	}
+	
+	if (!AversionDir.IsNearlyZero())
+	{
+		SampleOrigin += AversionDir.GetClampedToMaxSize(1.f) * WanderRadius * 0.5f;
+	}
+	
 	FNavLocation Result;
-	if (NavSys->GetRandomReachablePointInRadius(Pawn.GetActorLocation(), WanderRadius, Result))
+	if (NavSys->GetRandomReachablePointInRadius(SampleOrigin, WanderRadius, Result))
 	{
 		Controller.MoveToLocation(Result.Location);
 		ElapsedSinceLastPoint = 0.f;
@@ -30,7 +61,7 @@ EBTNodeResult::Type UBTTask_Wander::ExecuteTask(UBehaviorTreeComponent& OwnerCom
 	AAIController* Controller = OwnerComp.GetAIOwner();
 	APawn* Pawn = Controller ? Controller->GetPawn() : nullptr;
 	
-	if (!Controller || !Controller->GetPawn() || !PickNewWanderPoint(*Controller, *Pawn))
+	if (!Controller || !Controller->GetPawn() || !PickNewWanderPoint(*Controller, *Pawn, OwnerComp.GetBlackboardComponent()))
 	{
 		return EBTNodeResult::Failed;
 	}

@@ -27,8 +27,7 @@ public:
 	virtual void OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
 	
 private:
-	void ReevaluateNearestItem();
-	void ReevaluateNearestHouse();
+	AActor* FindNearest(TArray<TObjectPtr<AActor>> Actors) const;
 	bool IsHouseOnCooldown(AActor* House);
 	void MarkHouseVisited(AActor* House);
 	void CheckHouseOccupancy();
@@ -53,4 +52,13 @@ private:
 	
 	UPROPERTY()
 	TObjectPtr<AActor> CurrentHouse;
+	
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> KnownPurgeZones;
+	
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> KnownZombies;
+	
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> KnownDamagingZombies;
 };

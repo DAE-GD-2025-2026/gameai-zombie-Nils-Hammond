@@ -6,7 +6,9 @@
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Items/BaseItem.h"
+#include "PurgeZones/PurgeZone.h"
 #include "Village/House/House.h"
+#include "Zombies/BaseZombie.h"
 
 namespace BBKeys
 {
@@ -56,23 +58,31 @@ void UStudentPerceptor::TickComponent(float DeltaTime, enum ELevelTick TickType,
 			It.RemoveCurrent();
 		}
 	}
-
-	ReevaluateNearestHouse();
-	KnownItems.RemoveAll([](AActor* A) { return !IsValid(A) || A->IsHidden(); });
-	ReevaluateNearestItem();
+	TArray<TObjectPtr<AActor>> ValidHouses = KnownHouses.FilterByPredicate([this](AActor* House)
+	{
+		return !IsHouseOnCooldown(House) && House != CurrentHouse;
+	});
+	BlackboardComp->SetValueAsObject(BBKeys::NearestHouse, FindNearest(ValidHouses));
+	BlackboardComp->SetValueAsObject(BBKeys::NearestItem, FindNearest(KnownItems));
+	BlackboardComp->SetValueAsObject(BBKeys::NearestPurgeZone, FindNearest(KnownPurgeZones));
+	
+	TSet<TObjectPtr<AActor>> AllKnownZombies(KnownZombies);
+	AllKnownZombies.Append(KnownDamagingZombies);
+	BlackboardComp->SetValueAsObject(BBKeys::NearestZombie, FindNearest(AllKnownZombies.Array()));
 	
 	CheckHouseOccupancy();
 	
+	// Debug
 	if (GEngine)
 	{
 		const int32 BaseKey = 1000;
 
 		GEngine->AddOnScreenDebugMessage(BaseKey, 1.f, FColor::Cyan,
-			FString::Printf(TEXT("Perceived Items: %d"), KnownItems.Num()));
+			FString::Printf(TEXT("Damaging Zombies: %d"), KnownDamagingZombies.Num()));
 
-		for (int32 i = 0; i < KnownItems.Num(); ++i)
+		for (int32 i = 0; i < KnownDamagingZombies.Num(); ++i)
 		{
-			const AActor* Item = KnownItems[i];
+			const AActor* Item = KnownDamagingZombies[i];
 			GEngine->AddOnScreenDebugMessage(BaseKey + 1 + i, 1.f, FColor::White,
 				FString::Printf(TEXT("  [%d] %s"), i, Item ? *Item->GetName() : TEXT("null")));
 		}
@@ -93,8 +103,22 @@ void UStudentPerceptor::OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 	//	else
 	//		PerceivedItems.Remove(Actor);
 	//}
+	if (Stimulus.Type == UAISense::GetSenseID<UAISense_Damage>())
+	{
+		if (Cast<ABaseZombie>(Actor))
+		{
+			KnownDamagingZombies.Add(Actor);
+			KnownDamagingZombies = KnownDamagingZombies.FilterByPredicate([this](AActor* Zombie)
+			{
+				return FVector::DistSquared(GetOwner()->GetActorLocation(), Zombie->GetActorLocation()) < 10000;
+			});
+		}
+	}
+	
 	KnownItems.Empty();
 	KnownHouses.Empty();
+	KnownZombies.Empty();
+	KnownPurgeZones.Empty();
 	TArray<AActor*> PerceivedActors;
 	PerceptionComp->GetKnownPerceivedActors(UAISense_Sight::StaticClass(), PerceivedActors);
 	for (AActor* PerceivedActor : PerceivedActors)
@@ -109,62 +133,39 @@ void UStudentPerceptor::OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 		{
 			KnownHouses.Add(PerceivedActor);
 		}
+		if (Cast<ABaseZombie>(PerceivedActor))
+		{
+			KnownZombies.Add(PerceivedActor);
+		}
+		if (Cast<APurgeZone>(PerceivedActor))
+		{
+			KnownPurgeZones.Add(PerceivedActor);
+		}
 	}
 }
 
-void UStudentPerceptor::ReevaluateNearestItem()
+AActor* UStudentPerceptor::FindNearest(TArray<TObjectPtr<AActor>> Actors) const
 {
 	if (!BlackboardComp)
-		return;
+		return nullptr;
+	
+	Actors.RemoveAll([](AActor* A) { return !IsValid(A) || A->IsHidden(); });
 	
 	AActor* Nearest = nullptr;
 	float BestDistSq = FLT_MAX;
 	const FVector OwnerPos = GetOwner()->GetActorLocation();
 
-	for (AActor* Item : KnownItems)
+	for (AActor* Actor : Actors)
 	{
-		const float DistSq = FVector::DistSquared(OwnerPos, Item->GetActorLocation());
+		const float DistSq = FVector::DistSquared(OwnerPos, Actor->GetActorLocation());
 		if (DistSq < BestDistSq)
 		{
 			BestDistSq = DistSq;
-			Nearest = Item;
-		}
-	}
-	
-	if (!Nearest)
-	{
-		BlackboardComp->ClearValue(BBKeys::NearestItem);
-		return;
-	}
-
-	ABaseItem* NearestItem = static_cast<ABaseItem*>(Nearest);
-	
-	BlackboardComp->SetValueAsObject(BBKeys::NearestItem, NearestItem);
-	BlackboardComp->SetValueAsEnum(BBKeys::NearestItemType, static_cast<uint8>(NearestItem->GetItemType()));
-}
-
-void UStudentPerceptor::ReevaluateNearestHouse()
-{
-	if (!BlackboardComp)
-		return;
-	
-	AActor* Nearest = nullptr;
-	float BestDistSq = FLT_MAX;
-	const FVector OwnerPos = GetOwner()->GetActorLocation();
-
-	for (AActor* House : KnownHouses)
-	{
-		if (IsHouseOnCooldown(House) || House == CurrentHouse) continue;
-
-		const float DistSq = FVector::DistSquared(OwnerPos, House->GetActorLocation());
-		if (DistSq < BestDistSq)
-		{
-			BestDistSq = DistSq;
-			Nearest = House;
+			Nearest = Actor;
 		}
 	}
 
-	BlackboardComp->SetValueAsObject(BBKeys::NearestHouse, Nearest);
+	return Nearest;
 }
 
 void UStudentPerceptor::MarkHouseVisited(AActor* House)
