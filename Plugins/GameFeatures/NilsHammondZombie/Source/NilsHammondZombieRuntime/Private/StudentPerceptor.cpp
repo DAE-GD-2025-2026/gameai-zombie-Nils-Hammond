@@ -58,7 +58,7 @@ void UStudentPerceptor::TickComponent(float DeltaTime, enum ELevelTick TickType,
 	}
 
 	ReevaluateNearestHouse();
-	KnownItems.RemoveAll([](AActor* A) { return !IsValid(A); });
+	KnownItems.RemoveAll([](AActor* A) { return !IsValid(A) || A->IsHidden(); });
 	ReevaluateNearestItem();
 	
 	CheckHouseOccupancy();
@@ -99,6 +99,8 @@ void UStudentPerceptor::OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 	PerceptionComp->GetKnownPerceivedActors(UAISense_Sight::StaticClass(), PerceivedActors);
 	for (AActor* PerceivedActor : PerceivedActors)
 	{
+		if (PerceivedActor->IsHidden())
+			continue;
 		if (Cast<ABaseItem>(PerceivedActor))
 		{
 			KnownItems.Add(PerceivedActor);
@@ -128,8 +130,12 @@ void UStudentPerceptor::ReevaluateNearestItem()
 			Nearest = Item;
 		}
 	}
+	
 	if (!Nearest)
+	{
+		BlackboardComp->ClearValue(BBKeys::NearestItem);
 		return;
+	}
 
 	ABaseItem* NearestItem = static_cast<ABaseItem*>(Nearest);
 	
@@ -163,7 +169,7 @@ void UStudentPerceptor::ReevaluateNearestHouse()
 
 void UStudentPerceptor::MarkHouseVisited(AActor* House)
 {
-	if (!House)
+	if (House)
 		RecentlyVisitedHouses.Add(House, GetWorld()->GetTimeSeconds());
 }
 

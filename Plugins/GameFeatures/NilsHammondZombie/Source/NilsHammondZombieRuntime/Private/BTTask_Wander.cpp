@@ -27,9 +27,6 @@ bool UBTTask_Wander::PickNewWanderPoint(AAIController& Controller, APawn& Pawn)
 
 EBTNodeResult::Type UBTTask_Wander::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-	//if (GEngine)
-	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Executing Wander Task"));
-
 	AAIController* Controller = OwnerComp.GetAIOwner();
 	APawn* Pawn = Controller ? Controller->GetPawn() : nullptr;
 	
@@ -57,6 +54,6 @@ void UBTTask_Wander::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemo
 	const EPathFollowingStatus::Type Status = Controller->GetMoveStatus();
 	if (Status == EPathFollowingStatus::Idle || ElapsedSinceLastPoint > MaxTimePerPoint)
 	{
-		PickNewWanderPoint(*Controller, *Pawn);
+		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 	}
 }

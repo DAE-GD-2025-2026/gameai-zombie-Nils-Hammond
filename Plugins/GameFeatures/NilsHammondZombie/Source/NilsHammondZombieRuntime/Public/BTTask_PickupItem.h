@@ -16,6 +16,9 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FName TargetItemKey = "NearestItem";
+	
+	UPROPERTY(EditAnywhere, Category = "Blackboard")
+	FName HasWeaponKey = "HasWeapon";
 
 	UPROPERTY(EditAnywhere, Category = "Pickup")
 	float AcceptanceRadius = 50.f;
@@ -23,6 +26,7 @@ public:
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
 private:
+	bool IsWeapon(const ABaseItem* Item);
 	TWeakObjectPtr<ABaseItem> TargetItem;
 	bool bMoveIssued = false;
 };
