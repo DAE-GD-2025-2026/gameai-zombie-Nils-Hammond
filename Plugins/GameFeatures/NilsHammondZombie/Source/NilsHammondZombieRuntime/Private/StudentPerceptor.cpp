@@ -18,6 +18,7 @@ namespace BBKeys
 	const FName CurrentHouse = TEXT("CurrentHouse");
 	const FName NearestPurgeZone = TEXT("NearestPurgeZone");
 	const FName NearestZombie = TEXT("NearestZombie");
+	const FName LastKnownThreatLocation = TEXT("LastKnownThreatLocation");
 }
 
 UStudentPerceptor::UStudentPerceptor()
@@ -68,7 +69,10 @@ void UStudentPerceptor::TickComponent(float DeltaTime, enum ELevelTick TickType,
 	
 	TSet<TObjectPtr<AActor>> AllKnownZombies(KnownZombies);
 	AllKnownZombies.Append(KnownDamagingZombies);
-	BlackboardComp->SetValueAsObject(BBKeys::NearestZombie, FindNearest(AllKnownZombies.Array()));
+	AActor* NearestZombie = FindNearest(AllKnownZombies.Array());
+	BlackboardComp->SetValueAsObject(BBKeys::NearestZombie, NearestZombie);
+	if (NearestZombie)
+		BlackboardComp->SetValueAsVector(BBKeys::LastKnownThreatLocation, NearestZombie->GetActorLocation());
 	
 	CheckHouseOccupancy();
 	
