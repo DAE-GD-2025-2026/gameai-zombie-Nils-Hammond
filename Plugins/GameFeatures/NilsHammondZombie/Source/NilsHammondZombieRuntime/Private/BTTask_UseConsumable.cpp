@@ -7,7 +7,7 @@
 
 UBTTask_UseConsumable::UBTTask_UseConsumable()
 {
-	NodeName = "Set Running";
+	NodeName = "Use Consumable";
 }
 
 EBTNodeResult::Type UBTTask_UseConsumable::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
@@ -36,7 +36,7 @@ EBTNodeResult::Type UBTTask_UseConsumable::ExecuteTask(UBehaviorTreeComponent& O
 	TArray<ABaseItem*> CurrentItems = Inventory->GetInventory();
 	for (int SlotIdx = 0; SlotIdx < CurrentItems.Num(); ++SlotIdx)
 	{
-		if (CurrentItems[SlotIdx]->GetItemType() == DesiredItemType)
+		if (CurrentItems[SlotIdx] && CurrentItems[SlotIdx]->GetItemType() == DesiredItemType)
 		{
 			Inventory->UseItem(SlotIdx);
 			Inventory->RemoveItem(SlotIdx);

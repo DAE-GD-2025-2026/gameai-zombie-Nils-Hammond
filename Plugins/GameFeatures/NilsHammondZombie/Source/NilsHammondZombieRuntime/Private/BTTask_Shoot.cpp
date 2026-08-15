@@ -10,7 +10,6 @@
 UBTTask_Shoot::UBTTask_Shoot()
 {
 	NodeName = "Shoot";
-	bNotifyTick = true;
 }
 
 bool UBTTask_Shoot::FireWeapon(AAIController& Controller, APawn& Pawn, UBlackboardComponent& BB)

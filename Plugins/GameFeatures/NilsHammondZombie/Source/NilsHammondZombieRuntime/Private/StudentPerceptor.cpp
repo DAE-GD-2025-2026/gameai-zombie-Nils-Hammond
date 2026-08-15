@@ -82,6 +82,10 @@ void UStudentPerceptor::TickComponent(float DeltaTime, enum ELevelTick TickType,
 	{
 		BlackboardComp->SetValueAsFloat(BBKeys::HealthRatio, HPComponent->GetHealth() / HPComponent->GetMaxHealth());
 	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Couldn't Find Health Component"));
+	}
 	if (UStaminaComponent* StaminaComponent = Pawn->GetComponentByClass<UStaminaComponent>())
 	{
 		BlackboardComp->SetValueAsFloat(BBKeys::StaminaRatio, StaminaComponent->GetCurrentStamina() / StaminaComponent->GetMaxStamina());
