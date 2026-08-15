@@ -6,8 +6,8 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Items/BaseItem.h"
 #include "Common/InventoryComponent.h"
-#include "Items/Weapon.h"
 #include "Survivor/SurvivorPawn.h"
+#include "NilsHammondZombieHelpers.h"
 
 UBTTask_PickupItem::UBTTask_PickupItem()
 {
@@ -37,14 +37,14 @@ EBTNodeResult::Type UBTTask_PickupItem::ExecuteTask(UBehaviorTreeComponent& Owne
 		BB->ClearValue(TargetItemKey);
 		return EBTNodeResult::Succeeded;
 	}
-	if (IsWeapon(Item))
+	if (NilsHammondZombieHelpers::IsWeapon(Item))
 	{
 		ABaseItem* Item1 = !CurrentItems.IsEmpty() ? CurrentItems[0] : nullptr;
 		ABaseItem* Item2 = CurrentItems.Num() > 1 ? CurrentItems[1] : nullptr;
 		
 		int WeakestWeaponSlot = 0;
-		int Item1Ammo = Item1 && IsWeapon(Item1) ? Item1->GetValue() : -1;
-		int Item2Ammo = Item2 && IsWeapon(Item2) ? Item2->GetValue() : -1;
+		int Item1Ammo = Item1 && NilsHammondZombieHelpers::IsWeapon(Item1) ? Item1->GetValue() : -1;
+		int Item2Ammo = Item2 && NilsHammondZombieHelpers::IsWeapon(Item2) ? Item2->GetValue() : -1;
 		
 		if (Item1Ammo > Item2Ammo)
 			WeakestWeaponSlot = 1;
@@ -52,52 +52,37 @@ EBTNodeResult::Type UBTTask_PickupItem::ExecuteTask(UBehaviorTreeComponent& Owne
 		Inventory->UseItem(WeakestWeaponSlot);
 		Inventory->RemoveItem(WeakestWeaponSlot);
 		bPickedUp = Inventory->GrabItem(WeakestWeaponSlot, Item);
+		
+		UE_LOG(LogTemp, Warning, TEXT("Picked up weapon in slot %d"), WeakestWeaponSlot);
+
+		if (bPickedUp)
+			BB->SetValueAsBool(TEXT("HasWeapon"), true);
 	}
 	else
 	{
-		int32 FilledCount = 0;
-		for (ABaseItem* CurrentItem : CurrentItems)
+		int ItemSlot = Inventory->GetInventoryCapacity() - 1;
+		for (int i = 0; i < Inventory->GetInventoryCapacity(); i++)
 		{
-			if (CurrentItem != nullptr)
+			if (CurrentItems[i] == nullptr)
 			{
-				++FilledCount;
+				ItemSlot = i;
+				break;
 			}
 		}
-		UE_LOG(LogTemp, Warning, TEXT("Current Items: %d, Capacity %d"), FilledCount, Inventory->GetInventoryCapacity());
-		// Check if full up on slots, if so use up last slot, then pick up in next free slot regardless
-		int ItemSlot = 0;
-		if (FilledCount < Inventory->GetInventoryCapacity())
+		
+		if (CurrentItems[ItemSlot] != nullptr)
 		{
-			ItemSlot = FilledCount;
-			bPickedUp = Inventory->GrabItem(ItemSlot, Item);
-		}
-		else
-		{
-			ItemSlot = FilledCount - 1;
 			Inventory->UseItem(ItemSlot);
 			Inventory->RemoveItem(ItemSlot);
-			bPickedUp = Inventory->GrabItem(ItemSlot, Item);
 		}
+		bPickedUp = Inventory->GrabItem(ItemSlot, Item);
 		
 		UE_LOG(LogTemp, Warning, TEXT("Interacting with slot no %d"), ItemSlot);
 		
 		if (Item->GetItemType() == EItemType::Garbage)
 			Inventory->RemoveItem(ItemSlot);
-		
-		//for (int32 Slot = 0; Slot < Inventory->GetInventoryCapacity(); ++Slot)
-		//{
-		//	if (Inventory->GrabItem(Slot, Item))
-		//	{
-		//		Inventory->UseItem(Slot);
-		//		Inventory->RemoveItem(Slot);
-		//		bPickedUp = true;
-		//		break;
-		//	}
-		//}
 	}
 
-	const FString PickedUpStatus = bPickedUp ? TEXT("Picked Up == True") : TEXT("Picked Up == false");
-	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, PickedUpStatus);
 	if (bPickedUp)
 	{
 		BB->ClearValue(TargetItemKey);
@@ -105,12 +90,4 @@ EBTNodeResult::Type UBTTask_PickupItem::ExecuteTask(UBehaviorTreeComponent& Owne
 	}
 
 	return EBTNodeResult::Failed;
-}
-
-bool UBTTask_PickupItem::IsWeapon(const ABaseItem* Item)
-{
-	EItemType ItemType = Item->GetItemType();
-	if (ItemType == EItemType::Shotgun || ItemType == EItemType::Pistol)
-		return true;
-	return false;
 }
