@@ -19,6 +19,8 @@ namespace BBKeys
 	const FName NearestPurgeZone = TEXT("NearestPurgeZone");
 	const FName NearestZombie = TEXT("NearestZombie");
 	const FName LastKnownThreatLocation = TEXT("LastKnownThreatLocation");
+	const FName HealthRatio = TEXT("HealthRatio");
+	const FName StaminaRatio = TEXT("StaminaRatio");
 }
 
 UStudentPerceptor::UStudentPerceptor()
@@ -32,8 +34,6 @@ void UStudentPerceptor::BeginPlay()
 	
 	if ((PerceptionComp = GetOwner()->GetComponentByClass<UAIPerceptionComponent>()))
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Found Perception Comp"));
-
 		PerceptionComp->OnTargetPerceptionUpdated.AddDynamic(this, &UStudentPerceptor::OnPerceptionUpdated);
 	}
 	
@@ -41,7 +41,6 @@ void UStudentPerceptor::BeginPlay()
 	{
 		if (AAIController* Controller = Cast<AAIController>(Pawn->GetController()))
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Found Blackboard Comp"));
 			BlackboardComp = Controller->GetBlackboardComponent();
 		}
 	}
@@ -64,6 +63,8 @@ void UStudentPerceptor::TickComponent(float DeltaTime, enum ELevelTick TickType,
 		return !IsHouseOnCooldown(House) && House != CurrentHouse;
 	});
 	BlackboardComp->SetValueAsObject(BBKeys::NearestHouse, FindNearest(ValidHouses));
+	CheckHouseOccupancy();
+
 	BlackboardComp->SetValueAsObject(BBKeys::NearestItem, FindNearest(KnownItems));
 	BlackboardComp->SetValueAsObject(BBKeys::NearestPurgeZone, FindNearest(KnownPurgeZones));
 	
@@ -74,22 +75,16 @@ void UStudentPerceptor::TickComponent(float DeltaTime, enum ELevelTick TickType,
 	if (NearestZombie)
 		BlackboardComp->SetValueAsVector(BBKeys::LastKnownThreatLocation, NearestZombie->GetActorLocation());
 	
-	CheckHouseOccupancy();
-	
-	// Debug
-	if (GEngine)
+	APawn* Pawn = Cast<APawn>(GetOwner());
+	if (!Pawn)
+		return;
+	if (UHealthComponent* HPComponent = Pawn->GetComponentByClass<UHealthComponent>())
 	{
-		const int32 BaseKey = 1000;
-
-		GEngine->AddOnScreenDebugMessage(BaseKey, 1.f, FColor::Cyan,
-			FString::Printf(TEXT("Damaging Zombies: %d"), KnownDamagingZombies.Num()));
-
-		for (int32 i = 0; i < KnownDamagingZombies.Num(); ++i)
-		{
-			const AActor* Item = KnownDamagingZombies[i];
-			GEngine->AddOnScreenDebugMessage(BaseKey + 1 + i, 1.f, FColor::White,
-				FString::Printf(TEXT("  [%d] %s"), i, Item ? *Item->GetName() : TEXT("null")));
-		}
+		BlackboardComp->SetValueAsFloat(BBKeys::HealthRatio, HPComponent->GetHealth() / HPComponent->GetMaxHealth());
+	}
+	if (UStaminaComponent* StaminaComponent = Pawn->GetComponentByClass<UStaminaComponent>())
+	{
+		BlackboardComp->SetValueAsFloat(BBKeys::StaminaRatio, StaminaComponent->GetCurrentStamina() / StaminaComponent->GetMaxStamina());
 	}
 }
 
@@ -97,16 +92,6 @@ void UStudentPerceptor::OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 {
 	if (!Actor) return;
 
-	//GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green,
-	//	FString::Printf(TEXT("Saw: %s (Class: %s)"), *Actor->GetName(), *Actor->GetClass()->GetName()));
-	
-	//if (Cast<ABaseItem>(Actor))
-	//{
-	//	if (Stimulus.WasSuccessfullySensed())
-	//		PerceivedItems.Add(Actor);
-	//	else
-	//		PerceivedItems.Remove(Actor);
-	//}
 	if (Stimulus.Type == UAISense::GetSenseID<UAISense_Damage>())
 	{
 		if (Cast<ABaseZombie>(Actor))

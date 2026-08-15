@@ -1,7 +1,4 @@
 ﻿#include "BTTask_PickupItem.h"
-
-#include <Programs/UnrealBuildAccelerator/Core/Public/UbaBase.h>
-
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Items/BaseItem.h"
@@ -12,7 +9,6 @@
 UBTTask_PickupItem::UBTTask_PickupItem()
 {
 	NodeName = "Pickup item";
-	bNotifyTick = true;
 }
 
 EBTNodeResult::Type UBTTask_PickupItem::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
