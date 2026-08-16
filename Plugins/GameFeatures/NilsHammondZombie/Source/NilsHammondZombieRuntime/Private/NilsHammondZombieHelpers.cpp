@@ -27,8 +27,6 @@ bool NilsHammondZombieHelpers::FindNavPointAwayFromDirection(const UNavigationSy
 		const FVector OffsetDir = Dir.RotateAngleAxis(RandomAngle, FVector::UpVector);
 		const FVector SamplePoint = Origin + OffsetDir * SampleDistance;
 		
-		UE_LOG(LogTemp, Error, TEXT("FindNavPoint: Moving in direction {%f, %f}"), OffsetDir.X, OffsetDir.Y);
-		
 		if (NavSys->ProjectPointToNavigation(SamplePoint, OutResult, FVector(500.f, 500.f, 500.f)))
 		{
 			return true;

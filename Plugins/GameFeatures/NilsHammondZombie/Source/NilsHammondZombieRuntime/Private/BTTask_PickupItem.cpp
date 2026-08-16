@@ -41,8 +41,6 @@ EBTNodeResult::Type UBTTask_PickupItem::ExecuteTask(UBehaviorTreeComponent& Owne
 		Inventory->RemoveItem(WeakestWeaponSlot);
 		bPickedUp = Inventory->GrabItem(WeakestWeaponSlot, Item);
 		
-		UE_LOG(LogTemp, Warning, TEXT("Picked up weapon in slot %d"), WeakestWeaponSlot);
-
 		if (bPickedUp)
 			BB->SetValueAsBool(TEXT("HasWeapon"), true);
 	}
@@ -64,8 +62,6 @@ EBTNodeResult::Type UBTTask_PickupItem::ExecuteTask(UBehaviorTreeComponent& Owne
 			Inventory->RemoveItem(ItemSlot);
 		}
 		bPickedUp = Inventory->GrabItem(ItemSlot, Item);
-		
-		UE_LOG(LogTemp, Warning, TEXT("Interacting with slot no %d"), ItemSlot);
 		
 		if (Item->GetItemType() == EItemType::Garbage)
 			Inventory->RemoveItem(ItemSlot);

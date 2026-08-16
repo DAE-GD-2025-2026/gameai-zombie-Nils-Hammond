@@ -47,8 +47,6 @@ EBTNodeResult::Type UBTTask_Shoot::ExecuteTask(UBehaviorTreeComponent& OwnerComp
 
 	if (!Pawn || !Zombie)
 	{
-		if (!Zombie)
-			UE_LOG(LogTemp, Error, TEXT("Couldn't Find Zombie"));
 		return EBTNodeResult::Failed;
 	}
 
@@ -58,12 +56,11 @@ EBTNodeResult::Type UBTTask_Shoot::ExecuteTask(UBehaviorTreeComponent& OwnerComp
 	FCollisionQueryParams CollisionParams{};
 	CollisionParams.AddIgnoredActor(Pawn);
 	CollisionParams.AddIgnoredActor(Zombie);
-	FHitResult HitResult{};
-	const bool bBlocked = GetWorld()->LineTraceSingleByChannel(HitResult, PawnPos, ZombiePos, ECC_Visibility, CollisionParams);
 
-	if (bBlocked)
+	if (FHitResult HitResult{};
+		GetWorld()->LineTraceSingleByChannel(HitResult, PawnPos, ZombiePos,
+			ECC_Visibility, CollisionParams))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Can't find clear shot - blocked by %s"), HitResult.GetActor() ? *HitResult.GetActor()->GetName() : TEXT("unknown"));
 		return EBTNodeResult::Succeeded;
 	}
 
@@ -74,7 +71,6 @@ EBTNodeResult::Type UBTTask_Shoot::ExecuteTask(UBehaviorTreeComponent& OwnerComp
 	const FVector DirToThreat = ToZombie.GetSafeNormal();
 
 	Pawn->SetActorRotation(ToZombie.Rotation());
-	//Controller->SetFocus(Zombie);
 	
 	if (!FireWeapon(*Controller, *Pawn, *BB))
 	{

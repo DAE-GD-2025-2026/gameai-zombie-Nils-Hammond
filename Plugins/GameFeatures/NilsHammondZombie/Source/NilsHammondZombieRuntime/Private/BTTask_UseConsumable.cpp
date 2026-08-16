@@ -29,22 +29,15 @@ EBTNodeResult::Type UBTTask_UseConsumable::ExecuteTask(UBehaviorTreeComponent& O
 	}
 	else if (BB->GetValueAsFloat(StaminaRatioKey) > UseThreshold)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Vitals are fine"));
-
 		// Both Health and Stamina are fine enough
 		return EBTNodeResult::Failed;
 	}
-
-	UE_LOG(LogTemp, Warning, TEXT("Ratio at %f, Need %s"),
-		DesiredItemType == EItemType::Food ? BB->GetValueAsFloat(StaminaRatioKey) : BB->GetValueAsFloat(HealthRatioKey),
-		DesiredItemType == EItemType::Food ? TEXT("Food") : TEXT("Medkit"));
 
 	TArray<ABaseItem*> CurrentItems = Inventory->GetInventory();
 	for (int SlotIdx = 0; SlotIdx < CurrentItems.Num(); ++SlotIdx)
 	{
 		if (CurrentItems[SlotIdx] && CurrentItems[SlotIdx]->GetItemType() == DesiredItemType)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Consuming Slot %d"), SlotIdx);
 			Inventory->UseItem(SlotIdx);
 			Inventory->RemoveItem(SlotIdx);
 			return EBTNodeResult::Succeeded;

@@ -90,6 +90,5 @@ void UBTTask_Flee::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory
 	if (Status == EPathFollowingStatus::Idle || ElapsedSinceLastPoint > MaxTimePerPoint)
 	{
 		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
-		//PickFleePoint(*Controller, *Pawn, *BB);
 	}
 }

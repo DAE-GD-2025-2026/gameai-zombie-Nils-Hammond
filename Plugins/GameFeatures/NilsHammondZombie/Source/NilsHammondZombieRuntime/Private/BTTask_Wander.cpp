@@ -56,8 +56,6 @@ bool UBTTask_Wander::PickNewWanderPoint(AAIController& Controller, APawn& Pawn, 
 	CombinedCloseness = FMath::Clamp(CombinedCloseness, 0.f, 1.f);
 	AversionDir.Normalize();
 	
-	UE_LOG(LogTemp, Warning, TEXT("Moving in direction {%f, %f}, with angle %f"), AversionDir.X, AversionDir.Y, MaxAngle);
-	
 	FNavLocation Result;
 	if (!NilsHammondZombieHelpers::FindNavPointAwayFromDirection(NavSys, Result, PawnPos,
 		AversionDir, WanderRadius, MaxAngle, 4))
