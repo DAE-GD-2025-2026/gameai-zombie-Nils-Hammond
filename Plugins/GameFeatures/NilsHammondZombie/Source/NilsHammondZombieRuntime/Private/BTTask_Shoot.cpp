@@ -65,11 +65,13 @@ EBTNodeResult::Type UBTTask_Shoot::ExecuteTask(UBehaviorTreeComponent& OwnerComp
 
 	FCollisionQueryParams CollisionParams{};
 	CollisionParams.AddIgnoredActor(Pawn);
-	if (FHitResult HitResult{}; 
-		GetWorld()->LineTraceSingleByChannel(HitResult, PawnPos, ZombiePos, 
-			ECC_Pawn, CollisionParams) == false)
+	CollisionParams.AddIgnoredActor(Zombie);
+	FHitResult HitResult{};
+	const bool bBlocked = GetWorld()->LineTraceSingleByChannel(HitResult, PawnPos, ZombiePos, ECC_Visibility, CollisionParams);
+
+	if (bBlocked)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Can't find clear shot"));
+		UE_LOG(LogTemp, Warning, TEXT("Can't find clear shot - blocked by %s"), HitResult.GetActor() ? *HitResult.GetActor()->GetName() : TEXT("unknown"));
 		return EBTNodeResult::Failed;
 	}
 

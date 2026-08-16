@@ -15,7 +15,7 @@ public:
 	UBTTask_Flee();
 
 	UPROPERTY(EditAnywhere, Category = "Flee")
-	FName ThreatLocationKey = "LastKnownThreatLocation";
+	FBlackboardKeySelector FleeTargetKey;
 
 	UPROPERTY(EditAnywhere, Category = "Flee")
 	float FleeDistance = 800.f;

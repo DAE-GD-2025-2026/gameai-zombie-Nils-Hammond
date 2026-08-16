@@ -13,13 +13,16 @@ UBTTask_Flee::UBTTask_Flee()
 
 bool UBTTask_Flee::PickFleePoint(AAIController& Controller, APawn& Pawn, UBlackboardComponent& BB)
 {
-	if (!BB.IsVectorValueSet(ThreatLocationKey)) return false;
+	AActor* FleeTarget = Cast<AActor>(BB.GetValueAsObject(FleeTargetKey.SelectedKeyName));
+
+	if (!FleeTarget)
+		return false;
 
 	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(Pawn.GetWorld());
 	if (!NavSys) return false;
 
 	const FVector PawnPos = Pawn.GetActorLocation();
-	const FVector ThreatPos = BB.GetValueAsVector(ThreatLocationKey);
+	const FVector ThreatPos = FleeTarget->GetActorLocation();
 
 	FVector AwayDir = PawnPos - ThreatPos;
 	AwayDir.Z = 0;
@@ -66,26 +69,20 @@ void UBTTask_Flee::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory
 	APawn* Pawn = Controller ? Controller->GetPawn() : nullptr;
 	UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();
 
-	if (!Controller || !Pawn || !BB)
+	AActor* FleeTarget = BB ? Cast<AActor>(BB->GetValueAsObject(FleeTargetKey.SelectedKeyName)) : nullptr;
+	if (!Controller || !Pawn || !BB || !FleeTarget)
 	{
 		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
 		return;
 	}
 
-	if (BB->IsVectorValueSet(ThreatLocationKey))
-	{
-		const float DistToThreat = FVector::Dist(Pawn->GetActorLocation(), BB->GetValueAsVector(ThreatLocationKey));
-		UE_LOG(LogTemp, Warning, TEXT("Distance: %f"), DistToThreat);
+	const float DistToThreat = FVector::Dist(Pawn->GetActorLocation(), FleeTarget->GetActorLocation());
+	UE_LOG(LogTemp, Warning, TEXT("Distance: %f"), DistToThreat);
 
-		if (DistToThreat >= FleeDistance)
-		{
-			FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
-			return;
-		}
-	}
-	else
+	if (DistToThreat >= FleeDistance)
 	{
-		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
+		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+		return;
 	}
 
 	ElapsedSinceLastPoint += DeltaSeconds;
@@ -94,6 +91,7 @@ void UBTTask_Flee::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory
 
 	if (Status == EPathFollowingStatus::Idle || ElapsedSinceLastPoint > MaxTimePerPoint)
 	{
-		PickFleePoint(*Controller, *Pawn, *BB);
+		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+		//PickFleePoint(*Controller, *Pawn, *BB);
 	}
 }

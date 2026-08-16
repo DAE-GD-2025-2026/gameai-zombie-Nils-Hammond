@@ -13,12 +13,10 @@
 namespace BBKeys
 {
 	const FName NearestItem = TEXT("NearestItem");
-	const FName NearestItemType = TEXT("NearestItemType");
 	const FName NearestHouse = TEXT("NearestHouse");
 	const FName CurrentHouse = TEXT("CurrentHouse");
 	const FName NearestPurgeZone = TEXT("NearestPurgeZone");
 	const FName NearestZombie = TEXT("NearestZombie");
-	const FName LastKnownThreatLocation = TEXT("LastKnownThreatLocation");
 	const FName HealthRatio = TEXT("HealthRatio");
 	const FName StaminaRatio = TEXT("StaminaRatio");
 }
@@ -72,15 +70,13 @@ void UStudentPerceptor::TickComponent(float DeltaTime, enum ELevelTick TickType,
 	AllKnownZombies.Append(KnownDamagingZombies);
 	AActor* NearestZombie = FindNearest(AllKnownZombies.Array());
 	BlackboardComp->SetValueAsObject(BBKeys::NearestZombie, NearestZombie);
-	if (NearestZombie)
-		BlackboardComp->SetValueAsVector(BBKeys::LastKnownThreatLocation, NearestZombie->GetActorLocation());
 	
 	APawn* Pawn = Cast<APawn>(GetOwner());
 	if (!Pawn)
 		return;
 	if (UHealthComponent* HPComponent = Pawn->GetComponentByClass<UHealthComponent>())
 	{
-		BlackboardComp->SetValueAsFloat(BBKeys::HealthRatio, HPComponent->GetHealth() / HPComponent->GetMaxHealth());
+		BlackboardComp->SetValueAsFloat(BBKeys::HealthRatio, static_cast<float>(HPComponent->GetHealth()) / HPComponent->GetMaxHealth());
 	}
 	if (UStaminaComponent* StaminaComponent = Pawn->GetComponentByClass<UStaminaComponent>())
 	{
