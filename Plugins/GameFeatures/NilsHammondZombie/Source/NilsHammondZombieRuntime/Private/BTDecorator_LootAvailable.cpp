@@ -6,9 +6,7 @@ UBTDecorator_LootAvailable::UBTDecorator_LootAvailable()
 {
 	NodeName = TEXT("Loot Available");
 	FlowAbortMode = EBTFlowAbortMode::LowerPriority;
-
-	bNotifyBecomeRelevant = true;
-	bNotifyCeaseRelevant = true;
+	bNotifyTick = true;
 }
 
 bool UBTDecorator_LootAvailable::CalculateRawConditionValue(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) const
@@ -22,30 +20,14 @@ bool UBTDecorator_LootAvailable::CalculateRawConditionValue(UBehaviorTreeCompone
 	return bHasItem || bHasHouse;
 }
 
-void UBTDecorator_LootAvailable::OnBecomeRelevant(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
+void UBTDecorator_LootAvailable::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
-	Super::OnBecomeRelevant(OwnerComp, NodeMemory);
+	Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);
 
-	if (UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent())
+	const bool bCurrent = CalculateRawConditionValue(OwnerComp, NodeMemory);
+	if (bCurrent != bLastConditionValue)
 	{
-		BB->RegisterObserver(BB->GetKeyID(NearestItemKey), this,
-			FOnBlackboardChangeNotification::CreateUObject(this, &UBTDecorator_LootAvailable::OnBlackboardKeyChanged));
-		BB->RegisterObserver(BB->GetKeyID(NearestHouseKey), this,
-			FOnBlackboardChangeNotification::CreateUObject(this, &UBTDecorator_LootAvailable::OnBlackboardKeyChanged));
+		bLastConditionValue = bCurrent;
+		OwnerComp.RequestExecution(this);
 	}
-}
-
-void UBTDecorator_LootAvailable::OnCeaseRelevant(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
-{
-	if (UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent())
-	{
-		BB->UnregisterObserversFrom(this);
-	}
-
-	Super::OnCeaseRelevant(OwnerComp, NodeMemory);
-}
-
-EBlackboardNotificationResult UBTDecorator_LootAvailable::OnBlackboardKeyChanged(const UBlackboardComponent& Blackboard, FBlackboard::FKey ChangedKeyID) const
-{
-	return EBlackboardNotificationResult::ContinueObserving;
 }

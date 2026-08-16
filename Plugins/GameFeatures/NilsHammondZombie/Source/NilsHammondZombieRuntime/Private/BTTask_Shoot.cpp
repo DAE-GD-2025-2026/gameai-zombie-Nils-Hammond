@@ -63,6 +63,17 @@ EBTNodeResult::Type UBTTask_Shoot::ExecuteTask(UBehaviorTreeComponent& OwnerComp
 	const FVector PawnPos = Pawn->GetActorLocation();
 	const FVector ZombiePos = Zombie->GetActorLocation();
 
+	FCollisionQueryParams CollisionParams{};
+	CollisionParams.AddIgnoredActor(Pawn);
+	if (FHitResult HitResult{}; 
+		GetWorld()->LineTraceSingleByChannel(HitResult, PawnPos, ZombiePos, 
+			ECC_Pawn, CollisionParams) == false)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Can't find clear shot"));
+		return EBTNodeResult::Failed;
+	}
+
+		
 	FVector ToZombie = ZombiePos - PawnPos;
 	ToZombie.Z = 0.f;
 	const float Distance = ToZombie.Size();

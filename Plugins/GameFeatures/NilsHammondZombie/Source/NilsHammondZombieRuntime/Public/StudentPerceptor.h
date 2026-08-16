@@ -48,7 +48,7 @@ private:
 	TMap<TObjectPtr<AActor>, float> RecentlyVisitedHouses;
 	
 	UPROPERTY()
-	float HouseRevisitCooldown = 60.f;
+	float HouseRevisitCooldown = 90.f;
 	
 	UPROPERTY()
 	TObjectPtr<AActor> CurrentHouse;

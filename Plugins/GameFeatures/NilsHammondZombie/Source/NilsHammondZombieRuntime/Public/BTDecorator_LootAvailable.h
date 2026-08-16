@@ -18,12 +18,11 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FName NearestHouseKey = "NearestHouse";
 
-	virtual bool CalculateRawConditionValue(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) const override;
 
 protected:
-	virtual void OnBecomeRelevant(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
-	virtual void OnCeaseRelevant(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
+	virtual void TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
+	virtual bool CalculateRawConditionValue(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) const override;
 
 private:
-	EBlackboardNotificationResult OnBlackboardKeyChanged(const UBlackboardComponent& Blackboard, FBlackboard::FKey ChangedKeyID) const;
+	mutable bool bLastConditionValue = false;
 };
