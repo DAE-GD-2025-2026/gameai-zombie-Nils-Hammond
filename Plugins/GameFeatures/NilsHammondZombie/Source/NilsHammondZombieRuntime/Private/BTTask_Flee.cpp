@@ -2,6 +2,7 @@
 #include "AIController.h"
 #include "GameFramework/Pawn.h"
 #include "NavigationSystem.h"
+#include "NilsHammondZombieHelpers.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
 
@@ -16,10 +17,15 @@ bool UBTTask_Flee::PickFleePoint(AAIController& Controller, APawn& Pawn, UBlackb
 	AActor* FleeTarget = Cast<AActor>(BB.GetValueAsObject(FleeTargetKey.SelectedKeyName));
 
 	if (!FleeTarget)
+	{
 		return false;
+	}
 
 	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(Pawn.GetWorld());
-	if (!NavSys) return false;
+	if (!NavSys)
+	{
+		return false;
+	}
 
 	const FVector PawnPos = Pawn.GetActorLocation();
 	const FVector ThreatPos = FleeTarget->GetActorLocation();
@@ -28,25 +34,17 @@ bool UBTTask_Flee::PickFleePoint(AAIController& Controller, APawn& Pawn, UBlackb
 	AwayDir.Z = 0;
 	AwayDir.Normalize();
 	
-	// If it can't find a point on the navmesh (because it's trying to run off the map) increase angle radius
-	constexpr int MaxAttempts = 8;
-	for (int Attempt = 1; Attempt < MaxAttempts; Attempt++)
+	FNavLocation Result;
+	if (!NilsHammondZombieHelpers::FindNavPointAwayFromDirection(NavSys, Result, PawnPos,
+		AwayDir, FleeSampleDistance, AngleVarianceDegrees, 8))
 	{
-		const float RandomAngle = FMath::RandRange(-AngleVarianceDegrees * Attempt, AngleVarianceDegrees * Attempt);
-		const FVector OffsetDir = AwayDir.RotateAngleAxis(RandomAngle, FVector::UpVector);
-		const FVector SamplePoint = PawnPos + OffsetDir * FleeSampleDistance;
-		
-		FNavLocation Result;
-		if (NavSys->ProjectPointToNavigation(SamplePoint, Result))
-		{
-			Controller.MoveToLocation(Result.Location);
-			ElapsedSinceLastPoint = 0.f;
-			return true;
-		}
+		UE_LOG(LogTemp, Error, TEXT("Couldn't find Nav Point"));
+		return false;
 	}
-	UE_LOG(LogTemp, Error, TEXT("Couldn't find Nav Point"));
 
-	return false;
+	Controller.MoveToLocation(Result.Location);
+	ElapsedSinceLastPoint = 0.f;
+	return true;
 }
 
 EBTNodeResult::Type UBTTask_Flee::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
@@ -57,6 +55,7 @@ EBTNodeResult::Type UBTTask_Flee::ExecuteTask(UBehaviorTreeComponent& OwnerComp,
 
 	if (!Controller || !Pawn || !BB || !PickFleePoint(*Controller, *Pawn, *BB))
 	{
+		UE_LOG(LogTemp, Error, TEXT("Failed Flee"));
 		return EBTNodeResult::Failed;
 	}
 
@@ -77,7 +76,6 @@ void UBTTask_Flee::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory
 	}
 
 	const float DistToThreat = FVector::Dist(Pawn->GetActorLocation(), FleeTarget->GetActorLocation());
-	UE_LOG(LogTemp, Warning, TEXT("Distance: %f"), DistToThreat);
 
 	if (DistToThreat >= FleeDistance)
 	{

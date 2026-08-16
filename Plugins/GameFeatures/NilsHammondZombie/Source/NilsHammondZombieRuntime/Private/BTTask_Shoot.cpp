@@ -20,15 +20,7 @@ bool UBTTask_Shoot::FireWeapon(AAIController& Controller, APawn& Pawn, UBlackboa
 		return false;
 	
 	TArray<ABaseItem*> CurrentItems = Inventory->GetInventory();
-	ABaseItem* Item1 = !CurrentItems.IsEmpty() ? CurrentItems[0] : nullptr;
-	ABaseItem* Item2 = CurrentItems.Num() > 1 ? CurrentItems[1] : nullptr;
-		
-	int WeakestWeaponSlot = 0;
-	int Item1Ammo = Item1 && NilsHammondZombieHelpers::IsWeapon(Item1) ? Item1->GetValue() : INT_MAX;
-	int Item2Ammo = Item2 && NilsHammondZombieHelpers::IsWeapon(Item2) ? Item2->GetValue() : INT_MAX;
-		
-	if (Item1Ammo > Item2Ammo)
-		WeakestWeaponSlot = 1;
+	int WeakestWeaponSlot = NilsHammondZombieHelpers::GetWeaponSlotWithLeastAmmo(CurrentItems, false);
 	
 	if (!Inventory->UseItem(WeakestWeaponSlot))
 		return false;
@@ -72,7 +64,7 @@ EBTNodeResult::Type UBTTask_Shoot::ExecuteTask(UBehaviorTreeComponent& OwnerComp
 	if (bBlocked)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Can't find clear shot - blocked by %s"), HitResult.GetActor() ? *HitResult.GetActor()->GetName() : TEXT("unknown"));
-		return EBTNodeResult::Failed;
+		return EBTNodeResult::Succeeded;
 	}
 
 		

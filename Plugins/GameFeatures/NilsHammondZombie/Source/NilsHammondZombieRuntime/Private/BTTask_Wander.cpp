@@ -2,6 +2,7 @@
 #include "AIController.h"
 #include "GameFramework/Pawn.h"
 #include "NavigationSystem.h"
+#include "NilsHammondZombieHelpers.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Navigation/PathFollowingComponent.h"
 
@@ -17,43 +18,56 @@ bool UBTTask_Wander::PickNewWanderPoint(AAIController& Controller, APawn& Pawn, 
 	if (!NavSys) return false;
 
 	const FVector PawnPos = Pawn.GetActorLocation();
-	FVector SampleOrigin = PawnPos;
 	FVector AversionDir = FVector::ZeroVector;
+	float CombinedCloseness = 0.f;
 	
 	if (BB)
 	{
 		if (AActor* Zombie = Cast<AActor>(BB->GetValueAsObject(TEXT("NearestZombie"))))
 		{
 			FVector Away = PawnPos - Zombie->GetActorLocation();
-			if (!Away.IsNearlyZero())
+			Away.Z = 0.f;
+			const float Dist = Away.Size();
+			if (Dist < WanderRadius && !Away.IsNearlyZero())
 			{
 				AversionDir += Away.GetSafeNormal() * ThreatAversionWeight;
+				const float Closeness = (1.f - (Dist / WanderRadius)) * ThreatAversionWeight;
+				CombinedCloseness += Closeness;
 			}
 		}
 		
 		if (AActor* PurgeZone = Cast<AActor>(BB->GetValueAsObject(TEXT("NearestPurgeZone"))))
 		{
 			FVector Away = PawnPos - PurgeZone->GetActorLocation();
-			if (!Away.IsNearlyZero())
+			Away.Z = 0;
+			const float Dist = Away.Size();
+			if (Dist < WanderRadius && !Away.IsNearlyZero())
 			{
 				AversionDir += Away.GetSafeNormal() * PurgeAversionWeight;
+				const float Closeness = (1.f - (Dist / WanderRadius)) * PurgeAversionWeight;
+				CombinedCloseness += Closeness;
 			}
 		}
 	}
 	
-	if (!AversionDir.IsNearlyZero())
-	{
-		SampleOrigin += AversionDir.GetClampedToMaxSize(1.f) * WanderRadius * 0.5f;
-	}
+	
+	constexpr float MinAngle = 15.f;
+	const float MaxAngle = FMath::Lerp(180.f, MinAngle, CombinedCloseness);
+	CombinedCloseness = FMath::Clamp(CombinedCloseness, 0.f, 1.f);
+	AversionDir.Normalize();
+	
+	UE_LOG(LogTemp, Warning, TEXT("Moving in direction {%f, %f}, with angle %f"), AversionDir.X, AversionDir.Y, MaxAngle);
 	
 	FNavLocation Result;
-	if (NavSys->GetRandomReachablePointInRadius(SampleOrigin, WanderRadius, Result))
+	if (!NilsHammondZombieHelpers::FindNavPointAwayFromDirection(NavSys, Result, PawnPos,
+		AversionDir, WanderRadius, MaxAngle, 4))
 	{
-		Controller.MoveToLocation(Result.Location);
-		ElapsedSinceLastPoint = 0.f;
-		return true;
+		return false;
 	}
-	return false;
+	
+	Controller.MoveToLocation(Result.Location);
+	ElapsedSinceLastPoint = 0.f;
+	return true;
 }
 
 EBTNodeResult::Type UBTTask_Wander::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)

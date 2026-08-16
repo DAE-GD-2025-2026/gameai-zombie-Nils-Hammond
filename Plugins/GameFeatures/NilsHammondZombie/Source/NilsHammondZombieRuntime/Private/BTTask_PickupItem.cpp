@@ -35,15 +35,7 @@ EBTNodeResult::Type UBTTask_PickupItem::ExecuteTask(UBehaviorTreeComponent& Owne
 	}
 	if (NilsHammondZombieHelpers::IsWeapon(Item))
 	{
-		ABaseItem* Item1 = !CurrentItems.IsEmpty() ? CurrentItems[0] : nullptr;
-		ABaseItem* Item2 = CurrentItems.Num() > 1 ? CurrentItems[1] : nullptr;
-		
-		int WeakestWeaponSlot = 0;
-		int Item1Ammo = Item1 && NilsHammondZombieHelpers::IsWeapon(Item1) ? Item1->GetValue() : -1;
-		int Item2Ammo = Item2 && NilsHammondZombieHelpers::IsWeapon(Item2) ? Item2->GetValue() : -1;
-		
-		if (Item1Ammo > Item2Ammo)
-			WeakestWeaponSlot = 1;
+		int WeakestWeaponSlot = NilsHammondZombieHelpers::GetWeaponSlotWithLeastAmmo(CurrentItems, true);
 		
 		Inventory->UseItem(WeakestWeaponSlot);
 		Inventory->RemoveItem(WeakestWeaponSlot);
